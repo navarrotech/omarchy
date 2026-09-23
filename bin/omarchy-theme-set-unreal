@@ -8,7 +8,9 @@
 # the theme is applied, so a switch shows up after re-selecting it or restarting the editor.
 #
 # unreal.json keeps sRGB hex like every other template, so a theme can hand-write its own.
-# Unreal stores theme colors as linear FLinearColor strings, so they are converted here.
+# Unreal stores theme colors as linear FLinearColor strings, so they are converted here, and
+# keys them by the enum's registered names (EStyleColor::Panel), so the slot names are prefixed.
+# A key Unreal doesn't recognise is ignored and that slot keeps its default color.
 
 UNREAL_SOURCE_PATH="$HOME/.local/state/omarchy/current/theme/unreal.json"
 UNREAL_SETTINGS_DIR="$HOME/.config/Epic/UnrealEngine"
@@ -49,7 +51,7 @@ if jq --arg id "$UNREAL_THEME_ID" '
     Version: 1,
     Id: $id,
     DisplayName: "Omarchy",
-    Colors: (.Colors | map_values(linear_color))
+    Colors: (.Colors | with_entries(.key |= "EStyleColor::" + . | .value |= linear_color))
   }
 ' "$UNREAL_SOURCE_PATH" >"$tmp"; then
   mv "$tmp" "$UNREAL_THEME_PATH"

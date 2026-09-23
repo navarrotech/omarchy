@@ -27,7 +27,8 @@ cat >"$fake_bin/omarchy-toggle-enabled" <<'SH'
 SH
 chmod +x "$fake_bin/omarchy-toggle-enabled"
 
-# EStyleColor in Engine/Source/Runtime/SlateCore/Public/Styling/StyleColors.h, up to User1.
+# EStyleColor in Engine/Source/Runtime/SlateCore/Public/Styling/StyleColors.h, up to User1. Unreal
+# reads theme keys by the enum's registered names, which carry the EStyleColor:: prefix.
 unreal_slots=(
   Black Background Title WindowBorder Foldout Input InputOutline Recessed Panel Header Dropdown
   DropdownOutline Hover Hover2 White White25 Highlight Primary PrimaryHover PrimaryPress Secondary
@@ -56,7 +57,7 @@ sync_unreal
 pass "nothing is written for a machine that never ran Unreal"
 
 mkdir -p "$home/.config/Epic/UnrealEngine"
-expected_slots=$(printf '%s\n' "${unreal_slots[@]}" | sort)
+expected_slots=$(printf 'EStyleColor::%s\n' "${unreal_slots[@]}" | sort)
 
 for colors in "$ROOT"/themes/*/colors.toml; do
   theme=$(basename "$(dirname "$colors")")
@@ -81,9 +82,9 @@ pass "the theme keeps the id Unreal remembers the selection by"
 printf '{"Colors":{"White":"#ffffff","Black":"#000000","Hover2":"#80808040"}}\n' >"$current/theme/unreal.json"
 sync_unreal
 jq -e '
-  .Colors.White == "(R=1,G=1,B=1,A=1)"
-  and .Colors.Black == "(R=0,G=0,B=0,A=1)"
-  and (.Colors.Hover2 | test("^\\(R=0\\.21586[0-9]*,G=0\\.21586[0-9]*,B=0\\.21586[0-9]*,A=0\\.25098[0-9]*\\)$"))
+  .Colors["EStyleColor::White"] == "(R=1,G=1,B=1,A=1)"
+  and .Colors["EStyleColor::Black"] == "(R=0,G=0,B=0,A=1)"
+  and (.Colors["EStyleColor::Hover2"] | test("^\\(R=0\\.21586[0-9]*,G=0\\.21586[0-9]*,B=0\\.21586[0-9]*,A=0\\.25098[0-9]*\\)$"))
 ' "$unreal_theme" >/dev/null || fail "hex converts to linear color" "$(cat "$unreal_theme")"
 pass "hex converts to linear color, alpha unconverted"
 
