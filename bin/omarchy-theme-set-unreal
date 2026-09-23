@@ -31,7 +31,8 @@ fi
 mkdir -p "$(dirname "$UNREAL_THEME_PATH")"
 tmp=$(mktemp "$UNREAL_THEME_PATH.XXXXXX")
 
-if jq --arg id "$UNREAL_THEME_ID" '
+# -e fails on empty input too, which plain jq accepts silently by printing nothing.
+if jq -e --arg id "$UNREAL_THEME_ID" '
   def hex_byte:
     ascii_downcase | explode | map(if . >= 97 then . - 87 else . - 48 end) | .[0] * 16 + .[1];
 
@@ -57,6 +58,6 @@ if jq --arg id "$UNREAL_THEME_ID" '
   mv "$tmp" "$UNREAL_THEME_PATH"
 else
   rm -f "$tmp"
-  echo "Unreal theme not updated: $UNREAL_SOURCE_PATH has an invalid color" >&2
+  echo "Unreal theme not updated: $UNREAL_SOURCE_PATH is empty or has an invalid color" >&2
   exit 1
 fi

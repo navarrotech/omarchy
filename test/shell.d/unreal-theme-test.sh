@@ -96,6 +96,13 @@ fi
 cmp -s "$unreal_theme" "$test_tmp/previous.json" || fail "an invalid color leaves the previous theme in place"
 pass "an invalid color is reported and leaves the previous theme in place"
 
+: >"$current/theme/unreal.json"
+if sync_unreal 2>/dev/null; then
+  fail "an empty unreal.json is reported"
+fi
+cmp -s "$unreal_theme" "$test_tmp/previous.json" || fail "an empty unreal.json leaves the previous theme in place"
+pass "an empty unreal.json is reported and leaves the previous theme in place"
+
 OMARCHY_TEST_SKIP_UNREAL=1 sync_unreal
 [[ ! -e $unreal_theme ]] || fail "opting out removes the theme"
 pass "opting out removes the theme"
