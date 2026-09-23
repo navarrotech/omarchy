@@ -25,6 +25,9 @@ import bpy
 logger = logging.getLogger(__name__)
 
 THEME_FILE = Path.home() / ".local/state/omarchy/current/theme/blender.json"
+# omarchy-toggle-enabled's flag file. Opting out also removes this module, but only from the
+# next launch, so an already-running Blender checks the flag itself.
+SKIP_TOGGLE_FILE = Path.home() / ".local/state/omarchy/toggles/skip-blender-theme-changes"
 POLL_INTERVAL_SECONDS = 1.0
 
 # Identifies the file last applied. omarchy-theme-set swaps in a freshly copied theme
@@ -112,6 +115,13 @@ def apply_theme(theme_file: Path) -> None:
 def _poll_theme_file() -> float:
     """Timer callback: re-apply the theme when Omarchy stages a new file."""
     global _applied_stamp
+
+    if SKIP_TOGGLE_FILE.exists():
+        if _applied_stamp is not None:
+            logger.info("[Omarchy] Blender theme sync is turned off, leaving the theme alone")
+            # Forgetting the stamp makes turning sync back on apply the current theme at once.
+            _applied_stamp = None
+        return POLL_INTERVAL_SECONDS
 
     try:
         stat = THEME_FILE.stat()

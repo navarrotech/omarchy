@@ -100,3 +100,48 @@ blender --background --factory-startup --python-exit-code 1 \
   --python "$test_tmp/apply.py" -- "$ROOT/default/blender" "$rendered" >"$test_tmp/blender.log" 2>&1 ||
   fail "stock themes apply cleanly inside Blender" "$(grep -F '[Omarchy]' "$test_tmp/blender.log" || tail -20 "$test_tmp/blender.log")"
 pass "stock themes apply cleanly inside Blender"
+
+# Opting out removes the module only for the next launch, so a Blender that is already open
+# must stop syncing on its own, and pick the current theme up again once sync is turned back on.
+cat >"$test_tmp/toggle.py" <<'PY'
+import sys
+from pathlib import Path
+
+import bpy
+
+module_dir, theme_file, toggle_file = sys.argv[sys.argv.index("--") + 1:]
+sys.path.insert(0, module_dir)
+import omarchy_theme
+
+omarchy_theme.THEME_FILE = Path(theme_file)
+omarchy_theme.SKIP_TOGGLE_FILE = Path(toggle_file)
+theme = bpy.context.preferences.themes[0]
+factory_back = tuple(theme.properties.space.back)
+
+def fail(message):
+    print(message, file=sys.stderr)
+    sys.exit(1)
+
+omarchy_theme._poll_theme_file()
+if tuple(theme.properties.space.back) == factory_back:
+    fail("the theme applies while sync is on")
+
+bpy.ops.preferences.reset_default_theme()
+Path(toggle_file).touch()
+Path(theme_file).touch()
+omarchy_theme._poll_theme_file()
+if tuple(theme.properties.space.back) != factory_back:
+    fail("a running Blender ignores theme changes once sync is turned off")
+
+Path(toggle_file).unlink()
+omarchy_theme._poll_theme_file()
+if tuple(theme.properties.space.back) == factory_back:
+    fail("turning sync back on applies the current theme")
+PY
+
+first_theme=$(find "$rendered" -name '*.json' | sort | head -1)
+blender --background --factory-startup --python-exit-code 1 \
+  --python "$test_tmp/toggle.py" -- "$ROOT/default/blender" "$first_theme" "$test_tmp/skip-toggle" \
+  >"$test_tmp/toggle.log" 2>&1 ||
+  fail "a running Blender follows the opt-out toggle" "$(tail -5 "$test_tmp/toggle.log")"
+pass "a running Blender stops syncing on opt-out and resumes when it is turned back on"
