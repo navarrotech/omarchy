@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# omarchy:summary=Install the Omarchy theme sync module into Blender
+# omarchy:hidden=true
+
+# Blender cannot be told to reload its theme, so the retint happens inside it: the startup
+# module applies the generated blender.json at launch and re-applies it whenever a theme
+# switch stages a new one. This keeps that module current in every Blender version's config,
+# since each version reads its own ~/.config/blender/<version>/ and an upgrade starts empty.
+# Opting out removes the module, as it would otherwise keep syncing on its own.
+
+BLENDER_MODULE_SOURCE="$OMARCHY_PATH/default/blender/omarchy_theme.py"
+
+omarchy-cmd-present blender || exit 0
+
+shopt -s nullglob
+for version_dir in "$HOME"/.config/blender/*/; do
+  startup_module="${version_dir}scripts/startup/omarchy_theme.py"
+
+  if omarchy-toggle-enabled skip-blender-theme-changes; then
+    rm -f "$startup_module"
+  else
+    mkdir -p "$(dirname "$startup_module")"
+    cp "$BLENDER_MODULE_SOURCE" "$startup_module"
+  fi
+done
